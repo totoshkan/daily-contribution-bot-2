@@ -1,0 +1,44 @@
+name: Daily Auto Commit
+
+on:
+  schedule:
+    # Запуск каждый день в 00:00 UTC (Полночь). 
+    # Это время, когда начинается новый "день" на графике GitHub.
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Позволяет запускать вручную для тестирования
+
+jobs:
+  auto_commit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code (Клонирование репозитория)
+        uses: actions/checkout@v4
+        with:
+          # Использование встроенного токена для разрешения коммитов
+          token: ${{ secrets.GITHUB_TOKEN }} 
+      
+      - name: Generate timestamp and append to log.txt (Генерация времени)
+        run: |
+          # Получаем текущее время
+          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+          # Добавляем новую строку в файл log.txt
+          echo "Auto commit at $TIMESTAMP" >> log.txt
+          
+      - name: Commit and Push changes (Коммит и Отправка)
+        run: |
+          # Настройка данных пользователя для коммита
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Добавляем измененный файл в отслеживание
+          git add log.txt
+          
+          # Проверяем, есть ли изменения. Это предотвращает пустые коммиты.
+          if git diff --cached --exit-code; then
+            echo "No changes to commit. Exiting."
+          else
+            # Создание коммита
+            git commit -m "Automated contribution for $(date +%Y-%m-%d)"
+            # Отправка изменений
+            git push
+          fi
